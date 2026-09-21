@@ -27,7 +27,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0.45, z: 0}
-  m_LocalScale: {x: 0.7, y: 0.7, z: 1}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6313068491335160722}
@@ -82,7 +82,7 @@ SpriteRenderer:
   m_SortingOrder: 6
   m_MaskInteraction: 0
   m_Sprite: {fileID: 6878191808087117719, guid: 2b58319e0b2b8a24ca3fb0bc6eacdaae, type: 3}
-  m_Color: {r: 0.42, g: 0.31, b: 0.23, a: 1}
+  m_Color: {r: 0.66, g: 0.25, b: 0.21, a: 0.6}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -118,8 +118,8 @@ Transform:
   m_GameObject: {fileID: 7092121608223134427}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.85, z: 0}
-  m_LocalScale: {x: 1.2, y: 1.2, z: 1}
+  m_LocalPosition: {x: 0, y: 0.75, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6313068491335160722}
@@ -215,7 +215,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -8, y: -5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.2, y: 1.2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1600739363150810670}
@@ -271,12 +271,12 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 5
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 4189166813296826035, guid: 139db9baecb05bf4eb7d7f2bf5a06f9b, type: 3}
-  m_Color: {r: 0.6, g: 0.36, b: 0.24, a: 1}
+  m_Sprite: {fileID: -9076420665674042879, guid: b67bf637e4e828f4f8c5585f964e7e7e, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 0.875, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -317,7 +317,7 @@ CircleCollider2D:
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 0.45
+  m_Radius: 0.35
 --- !u!50 &3833178283182525194
 Rigidbody2D:
   serializedVersion: 5
@@ -391,5 +391,5 @@ MonoBehaviour:
   arrivalDistance: 0.25
   waypointWaitTime: 1
   lostSightCooldown: 1.5
-  wanderColor: {r: 0.6, g: 0.36, b: 0.24, a: 1}
-  seekColor: {r: 0.66, g: 0.25, b: 0.21, a: 1}
+  wanderColor: {r: 1, g: 1, b: 1, a: 1}
+  seekColor: {r: 1, g: 0.6, b: 0.6, a: 1}

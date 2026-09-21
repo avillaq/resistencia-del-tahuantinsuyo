@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.Tilemaps;
 using ResistenciaTahuantinsuyo.Runtime.AI;
 using ResistenciaTahuantinsuyo.Runtime.Player;
 
@@ -14,8 +16,6 @@ namespace ResistenciaTahuantinsuyo.Editor
         public static void BuildScene()
         {
             string scenePath = "Assets/_Project/Scenes/Test/SCN_Test_AI.unity";
-
-            // Asegurar que la escena está abierta
             var scene = EditorSceneManager.OpenScene(scenePath);
 
             // Limpiar objetos anteriores
@@ -25,16 +25,31 @@ namespace ResistenciaTahuantinsuyo.Editor
                 Object.DestroyImmediate(r);
             }
 
-            // Cargar Sprites
-            Sprite sprSquare = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/SPR_Square.png");
-            Sprite sprCircle = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/SPR_Circle.png");
-            Sprite sprMarker = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/SPR_Marker.png");
-            Sprite sprAlert = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/SPR_Alert.png");
-
             int obstacleLayer = LayerMask.NameToLayer("Obstacle");
             if (obstacleLayer == -1) obstacleLayer = 8;
 
-            // 1. Cámara Principal
+            // 1. Cargar Assets de Sprites y Tiles
+            Sprite sprPlayer = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/Characters/Player/hero1.png");
+            Sprite sprGuard = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/Characters/Enemies/guard_1.png");
+            Sprite sprAlert = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/SPR_Alert.png");
+            Sprite sprMarker = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/SPR_Marker.png");
+
+            // Tiles de Dungeon
+            Tile tileFloor = AssetDatabase.LoadAssetAtPath<Tile>("Assets/_Project/Tilemaps/Tiles/Dungeon/TILE_dungeon_1_2.asset");
+            Tile tileFloorAlt = AssetDatabase.LoadAssetAtPath<Tile>("Assets/_Project/Tilemaps/Tiles/Dungeon/TILE_dungeon_2_2.asset");
+            Tile tileWallTop = AssetDatabase.LoadAssetAtPath<Tile>("Assets/_Project/Tilemaps/Tiles/Dungeon/TILE_dungeon_1_4.asset");
+            Tile tileWallFace = AssetDatabase.LoadAssetAtPath<Tile>("Assets/_Project/Tilemaps/Tiles/Dungeon/TILE_dungeon_1_3.asset");
+            Tile tileWallBottom = AssetDatabase.LoadAssetAtPath<Tile>("Assets/_Project/Tilemaps/Tiles/Dungeon/TILE_dungeon_1_0.asset");
+
+            // Configurar tipos de colisión de tiles
+            if (tileFloor != null) { tileFloor.colliderType = Tile.ColliderType.None; EditorUtility.SetDirty(tileFloor); }
+            if (tileFloorAlt != null) { tileFloorAlt.colliderType = Tile.ColliderType.None; EditorUtility.SetDirty(tileFloorAlt); }
+            if (tileWallTop != null) { tileWallTop.colliderType = Tile.ColliderType.Grid; EditorUtility.SetDirty(tileWallTop); }
+            if (tileWallFace != null) { tileWallFace.colliderType = Tile.ColliderType.Grid; EditorUtility.SetDirty(tileWallFace); }
+            if (tileWallBottom != null) { tileWallBottom.colliderType = Tile.ColliderType.Grid; EditorUtility.SetDirty(tileWallBottom); }
+            AssetDatabase.SaveAssets();
+
+            // 2. Cámara Principal
             GameObject camObj = new GameObject("Main Camera");
             camObj.tag = "MainCamera";
             camObj.transform.position = new Vector3(0, 0, -10);
@@ -42,42 +57,88 @@ namespace ResistenciaTahuantinsuyo.Editor
             cam.orthographic = true;
             cam.orthographicSize = 9.0f;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.20f, 0.22f, 0.18f);
+            cam.backgroundColor = new Color(0.12f, 0.14f, 0.12f); // Fondo andino
             camObj.AddComponent<AudioListener>();
 
-            // 2. Luz 2D Global
+            // 3. Luz 2D Global (URP 2D)
             GameObject lightObj = new GameObject("Global 2D Light");
             var light2D = lightObj.AddComponent<Light2D>();
             light2D.lightType = Light2D.LightType.Global;
-            light2D.intensity = 1.0f;
-            light2D.color = new Color(1.0f, 0.96f, 0.90f);
+            light2D.intensity = 1.15f;
+            light2D.color = new Color(1.0f, 0.97f, 0.92f);
 
-            // 3. Suelo
-            GameObject groundObj = new GameObject("Ground");
-            groundObj.transform.position = new Vector3(0, 0, 1);
-            groundObj.transform.localScale = new Vector3(26, 18, 1);
-            var groundSr = groundObj.AddComponent<SpriteRenderer>();
-            groundSr.sprite = sprSquare;
-            groundSr.color = new Color(0.85f, 0.80f, 0.70f); // Marfil / Arena
-            groundSr.sortingOrder = -10;
+            // 4. Grid y Tilemaps
+            GameObject gridObj = new GameObject("Grid");
+            var grid = gridObj.AddComponent<Grid>();
+            grid.cellSize = new Vector3(1f, 1f, 0f);
 
-            // 4. Muros Perimetrales
-            GameObject boundaries = new GameObject("Boundaries");
-            CreateWall("Wall_North", boundaries.transform, new Vector3(0, 9.5f, 0), new Vector3(28, 1, 1), obstacleLayer, sprSquare);
-            CreateWall("Wall_South", boundaries.transform, new Vector3(0, -9.5f, 0), new Vector3(28, 1, 1), obstacleLayer, sprSquare);
-            CreateWall("Wall_West", boundaries.transform, new Vector3(-13.5f, 0, 0), new Vector3(1, 20, 1), obstacleLayer, sprSquare);
-            CreateWall("Wall_East", boundaries.transform, new Vector3(13.5f, 0, 0), new Vector3(1, 20, 1), obstacleLayer, sprSquare);
+            // 4A. Tilemap_Ground (Suelo)
+            GameObject groundObj = new GameObject("Tilemap_Ground");
+            groundObj.transform.parent = gridObj.transform;
+            groundObj.transform.localPosition = Vector3.zero;
+            var groundTilemap = groundObj.AddComponent<Tilemap>();
+            var groundRenderer = groundObj.AddComponent<TilemapRenderer>();
+            groundRenderer.sortingOrder = -10;
 
-            // 5. Obstáculos Interiores para Sigilo
-            GameObject obstacles = new GameObject("Obstacles");
-            CreateWall("ENV_Wall_WestPillar", obstacles.transform, new Vector3(-4.5f, 0, 0), new Vector3(1.5f, 6.0f, 1), obstacleLayer, sprSquare);
-            CreateWall("ENV_Wall_EastPillar", obstacles.transform, new Vector3(4.5f, 0, 0), new Vector3(1.5f, 6.0f, 1), obstacleLayer, sprSquare);
-            GameObject centerWall = CreateWall("ENV_Wall_CenterBlock", obstacles.transform, new Vector3(0, 2.5f, 0), new Vector3(4.0f, 1.5f, 1), obstacleLayer, sprSquare);
+            int minX = -13, maxX = 12;
+            int minY = -9, maxY = 8;
+            for (int x = minX; x <= maxX; x++)
+            {
+                for (int y = minY; y <= maxY; y++)
+                {
+                    Tile chosenFloor = ((x + y) % 5 == 0 && tileFloorAlt != null) ? tileFloorAlt : tileFloor;
+                    groundTilemap.SetTile(new Vector3Int(x, y, 0), chosenFloor);
+                }
+            }
 
-            // Guardar prefab de muro
-            PrefabUtility.SaveAsPrefabAsset(centerWall, "Assets/_Project/Prefabs/World/ENV_Wall.prefab");
+            // 4B. Tilemap_Obstacles (Muros y Coberturas)
+            GameObject obstaclesObj = new GameObject("Tilemap_Obstacles");
+            obstaclesObj.transform.parent = gridObj.transform;
+            obstaclesObj.transform.localPosition = Vector3.zero;
+            obstaclesObj.layer = obstacleLayer;
 
-            // 6. Rutas de Patrullaje
+            var obsTilemap = obstaclesObj.AddComponent<Tilemap>();
+            var obsRenderer = obstaclesObj.AddComponent<TilemapRenderer>();
+            obsRenderer.sortingOrder = 0;
+
+            var tilemapCollider = obstaclesObj.AddComponent<TilemapCollider2D>();
+            tilemapCollider.usedByComposite = true;
+
+            var compositeCollider = obstaclesObj.AddComponent<CompositeCollider2D>();
+            compositeCollider.geometryType = CompositeCollider2D.GeometryType.Polygons;
+
+            var obsRb = obstaclesObj.GetComponent<Rigidbody2D>();
+            obsRb.bodyType = RigidbodyType2D.Static;
+
+            void PaintWallRect(int startX, int startY, int width, int height)
+            {
+                for (int x = startX; x < startX + width; x++)
+                {
+                    for (int y = startY; y < startY + height; y++)
+                    {
+                        Tile t = (y == startY + height - 1 && tileWallTop != null) ? tileWallTop :
+                                 (y == startY && tileWallBottom != null) ? tileWallBottom : tileWallFace;
+                        obsTilemap.SetTile(new Vector3Int(x, y, 0), t ?? tileFloor);
+                    }
+                }
+            }
+
+            // Muros perimetrales
+            PaintWallRect(minX, maxY, maxX - minX + 1, 1);     // Muro Norte
+            PaintWallRect(minX, minY, maxX - minX + 1, 1);     // Muro Sur
+            PaintWallRect(minX, minY + 1, 1, maxY - minY - 1); // Muro Oeste
+            PaintWallRect(maxX, minY + 1, 1, maxY - minY - 1); // Muro Este
+
+            // Muros y Pilares Interiores (para sigilo y cobertura)
+            PaintWallRect(-5, -2, 2, 5); // Pilar Oeste (ancho 2, alto 5)
+            PaintWallRect(4, -2, 2, 5);  // Pilar Este (ancho 2, alto 5)
+            PaintWallRect(-2, 2, 4, 2);  // Bloque Central Superior (ancho 4, alto 2)
+
+            // Procesar cambios en el tilemap y generar geometría compuesta
+            tilemapCollider.ProcessTilemapChanges();
+            compositeCollider.GenerateGeometry();
+
+            // 5. Rutas de Patrullaje
             GameObject routesParent = new GameObject("PatrolRoutes");
 
             // Ruta Oeste
@@ -114,18 +175,19 @@ namespace ResistenciaTahuantinsuyo.Editor
                 wp.transform.position = wpsEast[i];
             }
 
-            // 7. Jugador (CHR_Player)
+            // 6. Jugador (CHR_Player con sprite real)
             GameObject playerObj = new GameObject("CHR_Player");
             playerObj.tag = "Player";
             playerObj.transform.position = new Vector3(0, -5f, 0);
+            playerObj.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
 
             var playerSr = playerObj.AddComponent<SpriteRenderer>();
-            playerSr.sprite = sprCircle;
-            playerSr.color = new Color(0.26f, 0.32f, 0.43f); // #43526D Índigo textil
+            playerSr.sprite = sprPlayer;
+            playerSr.color = Color.white;
             playerSr.sortingOrder = 5;
 
             var playerCol = playerObj.AddComponent<CircleCollider2D>();
-            playerCol.radius = 0.45f;
+            playerCol.radius = 0.35f;
 
             var playerRb = playerObj.AddComponent<Rigidbody2D>();
             playerRb.gravityScale = 0;
@@ -137,58 +199,40 @@ namespace ResistenciaTahuantinsuyo.Editor
             GameObject playerMarker = new GameObject("OrientationMarker");
             playerMarker.transform.parent = playerObj.transform;
             playerMarker.transform.localPosition = new Vector3(0, 0.45f, 0);
-            playerMarker.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+            playerMarker.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
             var pMarkerSr = playerMarker.AddComponent<SpriteRenderer>();
             pMarkerSr.sprite = sprMarker;
-            pMarkerSr.color = new Color(0.91f, 0.86f, 0.78f); // #E7DCC8 Marfil
+            pMarkerSr.color = new Color(0.91f, 0.86f, 0.78f, 0.6f);
             pMarkerSr.sortingOrder = 6;
 
-            // Guardar prefab de jugador
             PrefabUtility.SaveAsPrefabAsset(playerObj, "Assets/_Project/Prefabs/Player/CHR_Player.prefab");
 
-            // 8. Enemigos (CHR_SpanishGuard)
-            var guard1 = BuildGuard("CHR_SpanishGuard_01", new Vector3(-8f, -5f, 0), routeWest, playerObj.transform, sprCircle, sprMarker, sprAlert, obstacleLayer);
-            var guard2 = BuildGuard("CHR_SpanishGuard_02", new Vector3(8f, 5f, 0), routeEast, playerObj.transform, sprCircle, sprMarker, sprAlert, obstacleLayer);
+            // 7. Enemigos (CHR_SpanishGuard con sprite real de guardia)
+            var guard1 = BuildGuard("CHR_SpanishGuard_01", new Vector3(-8f, -5f, 0), routeWest, playerObj.transform, sprGuard, sprMarker, sprAlert, obstacleLayer);
+            var guard2 = BuildGuard("CHR_SpanishGuard_02", new Vector3(8f, 5f, 0), routeEast, playerObj.transform, sprGuard, sprMarker, sprAlert, obstacleLayer);
 
-            // Guardar prefab de enemigo
             PrefabUtility.SaveAsPrefabAsset(guard1, "Assets/_Project/Prefabs/Enemies/CHR_SpanishGuard.prefab");
 
-            // Guardar escena
+            // 8. Guardar Escena
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("<color=green><b>[Resistencia del Tahuantinsuyo]</b> Escena SCN_Test_AI y prefabs generados con éxito.</color>");
-        }
-
-        private static GameObject CreateWall(string name, Transform parent, Vector3 pos, Vector3 scale, int layer, Sprite sprite)
-        {
-            GameObject wall = new GameObject(name);
-            wall.transform.parent = parent;
-            wall.transform.position = pos;
-            wall.transform.localScale = scale;
-            wall.layer = layer;
-
-            var sr = wall.AddComponent<SpriteRenderer>();
-            sr.sprite = sprite;
-            sr.color = new Color(0.42f, 0.31f, 0.23f); // #6B4F3A Marrón tierra
-            sr.sortingOrder = 0;
-
-            wall.AddComponent<BoxCollider2D>();
-            return wall;
+            Debug.Log("<color=green><b>[Resistencia del Tahuantinsuyo]</b> Escena SCN_Test_AI reconstruida con Tilemaps y sprites reales con éxito.</color>");
         }
 
         private static GameObject BuildGuard(string name, Vector3 pos, PatrolRoute route, Transform playerTransform, Sprite sprBody, Sprite sprMarker, Sprite sprAlert, int obstacleLayer)
         {
             GameObject guard = new GameObject(name);
             guard.transform.position = pos;
+            guard.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
 
             var guardSr = guard.AddComponent<SpriteRenderer>();
             guardSr.sprite = sprBody;
-            guardSr.color = new Color(0.60f, 0.36f, 0.24f); // #9A5B3E Arcilla / Terracota
+            guardSr.color = Color.white;
             guardSr.sortingOrder = 5;
 
             var guardCol = guard.AddComponent<CircleCollider2D>();
-            guardCol.radius = 0.45f;
+            guardCol.radius = 0.35f;
 
             var guardRb = guard.AddComponent<Rigidbody2D>();
             guardRb.gravityScale = 0;
@@ -208,17 +252,17 @@ namespace ResistenciaTahuantinsuyo.Editor
             GameObject gMarker = new GameObject("OrientationMarker");
             gMarker.transform.parent = guard.transform;
             gMarker.transform.localPosition = new Vector3(0, 0.45f, 0);
-            gMarker.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+            gMarker.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
             var gMarkerSr = gMarker.AddComponent<SpriteRenderer>();
             gMarkerSr.sprite = sprMarker;
-            gMarkerSr.color = new Color(0.42f, 0.31f, 0.23f); // #6B4F3A
+            gMarkerSr.color = new Color(0.66f, 0.25f, 0.21f, 0.6f);
             gMarkerSr.sortingOrder = 6;
 
             // Indicador de Alerta
             GameObject alertObj = new GameObject("AlertIndicator");
             alertObj.transform.parent = guard.transform;
-            alertObj.transform.localPosition = new Vector3(0, 0.85f, 0);
-            alertObj.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
+            alertObj.transform.localPosition = new Vector3(0, 0.75f, 0);
+            alertObj.transform.localScale = new Vector3(1.0f, 1.0f, 1f);
             var alertSr = alertObj.AddComponent<SpriteRenderer>();
             alertSr.sprite = sprAlert;
             alertSr.color = new Color(0.66f, 0.25f, 0.21f); // #A94136 Rojo alerta
@@ -235,6 +279,8 @@ namespace ResistenciaTahuantinsuyo.Editor
             soCtrl.FindProperty("seekSpeed").floatValue = 3.5f;
             soCtrl.FindProperty("waypointWaitTime").floatValue = 1.0f;
             soCtrl.FindProperty("lostSightCooldown").floatValue = 1.5f;
+            soCtrl.FindProperty("wanderColor").colorValue = Color.white;
+            soCtrl.FindProperty("seekColor").colorValue = new Color(1.0f, 0.6f, 0.6f);
             soCtrl.ApplyModifiedProperties();
 
             return guard;
