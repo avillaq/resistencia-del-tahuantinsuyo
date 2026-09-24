@@ -4,7 +4,7 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
 {
     /// <summary>
     /// Maneja la percepción sensorial (campo y línea de visión 2D) del enemigo.
-    /// Cumple con product.md sección 7.4: FOV + Línea de visión libre de obstáculos = Detección.
+    /// FOV + Línea de visión libre de obstáculos = Detección.
     /// </summary>
     public class EnemyPerception : MonoBehaviour
     {

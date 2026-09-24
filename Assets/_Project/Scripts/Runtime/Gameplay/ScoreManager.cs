@@ -4,7 +4,7 @@ using UnityEngine;
 namespace ResistenciaTahuantinsuyo.Runtime.Gameplay
 {
     /// <summary>
-    /// Administrador de puntaje y objetivos de misión según product.md (Secciones 1.1, 7.7, 18 y 23).
+    /// Administrador de puntaje y objetivos de misión.
     /// Registra objetos culturales recuperados, penalizaciones de detección y cálculo de maestría.
     /// </summary>
     public class ScoreManager : MonoBehaviour

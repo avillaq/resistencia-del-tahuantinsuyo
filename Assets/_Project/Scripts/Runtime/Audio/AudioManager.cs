@@ -8,7 +8,7 @@ using Random = UnityEngine.Random;
 namespace ResistenciaTahuantinsuyo.Runtime.Audio
 {
     /// <summary>
-    /// Administrador central de Audio según product.md (Sección 13 y 15).
+    /// Administrador central de Audio.
     /// Implementa las 4 buenas prácticas de audio para videojuegos:
     /// 1. Jerarquía de Buses y Headroom (Master, Music, Ambience, SFX, Footsteps, UI).
     /// 2. Ducking Dinámico / Snapshots de Estado (Exploration vs Tension).

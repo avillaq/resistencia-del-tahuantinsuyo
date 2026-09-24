@@ -4,7 +4,7 @@ using ResistenciaTahuantinsuyo.Runtime.Audio;
 namespace ResistenciaTahuantinsuyo.Runtime.Gameplay
 {
     /// <summary>
-    /// Objeto cultural recuperable según product.md (Secciones 7.7, 11.4 y 18).
+    /// Objeto cultural recuperable.
     /// Otorga puntaje, reproduce feedback sonoro y registra el objetivo de misión.
     /// </summary>
     [RequireComponent(typeof(Collider2D))]

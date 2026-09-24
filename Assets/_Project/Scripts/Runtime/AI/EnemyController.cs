@@ -6,7 +6,7 @@ using ResistenciaTahuantinsuyo.Runtime.Gameplay;
 namespace ResistenciaTahuantinsuyo.Runtime.AI
 {
     /// <summary>
-    /// Controlador principal de IA de enemigos según product.md (Secciones 7.2, 7.3, 7.5, 7.6, 15).
+    /// Controlador principal de IA de enemigos.
     /// Coordina la máquina de estados entre WANDER y SEEK, ataque cuerpo a cuerpo y eventos de Audio/Score.
     /// Responde a la finalización de misión congelando comportamiento y silenciando pasos.
     /// </summary>

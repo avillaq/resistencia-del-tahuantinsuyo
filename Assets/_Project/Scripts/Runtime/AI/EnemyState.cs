@@ -1,7 +1,7 @@
 namespace ResistenciaTahuantinsuyo.Runtime.AI
 {
     /// <summary>
-    /// Estados base de la máquina de estados del enemigo según product.md (Sección 7.2).
+    /// Estados base de la máquina de estados del enemigo.
     /// </summary>
     public enum EnemyState
     {

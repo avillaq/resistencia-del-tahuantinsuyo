@@ -8,7 +8,7 @@ namespace ResistenciaTahuantinsuyo.Runtime.Player
 {
     /// <summary>
     /// Controlador del jugador para movimiento top-down en 8 direcciones.
-    /// Respeta product.md secciones 2.3, 7.1, 7.6: controles WASD con Unity Input System,
+    /// controles WASD con Unity Input System,
     /// física 2D continua contra obstáculos, integración con Health y desacoplado de la UI.
     /// Responde a la finalización de misión bloqueando el control para evitar muertes posvictoria.
     /// </summary>

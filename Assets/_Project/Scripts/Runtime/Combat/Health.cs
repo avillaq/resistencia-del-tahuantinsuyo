@@ -6,7 +6,7 @@ using ResistenciaTahuantinsuyo.Runtime.Gameplay;
 namespace ResistenciaTahuantinsuyo.Runtime.Combat
 {
     /// <summary>
-    /// Componente desacoplado de vida y daño según product.md (Sección 7.6, 11.2 y 11.3).
+    /// Componente desacoplado de vida y daño.
     /// Maneja vida, invulnerabilidad post-impacto, feedback visual no-gore y eventos de estado.
     /// </summary>
     public class Health : MonoBehaviour, IDamageable

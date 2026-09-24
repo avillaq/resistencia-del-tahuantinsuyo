@@ -8,7 +8,7 @@ using ResistenciaTahuantinsuyo.Runtime.Gameplay;
 namespace ResistenciaTahuantinsuyo.Runtime.UI
 {
     /// <summary>
-    /// Controlador oficial del HUD en UI Toolkit según product.md (Sección 8.1, 8.2 y 8.6).
+    /// Controlador oficial del HUD en UI Toolkit.
     /// Conecta reactivamente la barra de vida, el puntaje, las reliquias y el estado de alerta.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]

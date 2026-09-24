@@ -4,7 +4,7 @@ using ResistenciaTahuantinsuyo.Runtime.Audio;
 namespace ResistenciaTahuantinsuyo.Runtime.Gameplay
 {
     /// <summary>
-    /// Zona de evacuación/salida segura según product.md (Secciones 3.1 y 6.3).
+    /// Zona de evacuación/salida segura.
     /// Al alcanzarla tras recuperar las reliquias requeridas, finaliza la misión con éxito y calcula el puntaje.
     /// </summary>
     [RequireComponent(typeof(Collider2D))]

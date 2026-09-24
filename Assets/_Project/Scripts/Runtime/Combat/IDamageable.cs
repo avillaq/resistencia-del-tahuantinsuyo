@@ -3,7 +3,7 @@ using UnityEngine;
 namespace ResistenciaTahuantinsuyo.Runtime.Combat
 {
     /// <summary>
-    /// Interfaz obligatoria para cualquier entidad que reciba daño según product.md (Sección 7.6 y 10.1).
+    /// Interfaz obligatoria para cualquier entidad que reciba daño.
     /// </summary>
     public interface IDamageable
     {
