@@ -1,12 +1,16 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ResistenciaTahuantinsuyo.Runtime.Audio;
+using ResistenciaTahuantinsuyo.Runtime.Combat;
+using ResistenciaTahuantinsuyo.Runtime.Gameplay;
 
 namespace ResistenciaTahuantinsuyo.Runtime.Player
 {
     /// <summary>
     /// Controlador del jugador para movimiento top-down en 8 direcciones.
-    /// Respeta product.md secciones 2.3 y 7.1: controles WASD con Unity Input System,
-    /// física 2D continua contra obstáculos y desacoplado de la UI.
+    /// Respeta product.md secciones 2.3, 7.1, 7.6: controles WASD con Unity Input System,
+    /// física 2D continua contra obstáculos, integración con Health y desacoplado de la UI.
+    /// Responde a la finalización de misión bloqueando el control para evitar muertes posvictoria.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     public class PlayerController : MonoBehaviour
@@ -14,19 +18,23 @@ namespace ResistenciaTahuantinsuyo.Runtime.Player
         [Header("Movimiento")]
         [SerializeField] private float moveSpeed = 4.5f;
         [SerializeField] private float rotationSpeed = 900f; // grados por segundo
-
-        [Header("Colores de Paleta Andina")]
-        [SerializeField] private Color playerColor = new Color(0.26f, 0.32f, 0.43f); // #43526D Índigo textil andino
+        [SerializeField] private float stepInterval = 0.35f;
 
         [Header("Entrada (Opcional)")]
         [Tooltip("Acción del Input System opcional. Si no se asigna, lee directamente WASD del Input System.")]
         [SerializeField] private InputActionReference moveAction;
 
         private Rigidbody2D rb;
+        private Health health;
         private Vector2 moveInput;
         private SpriteRenderer spriteRenderer;
+        private float stepTimer = 0f;
+        private bool isDead = false;
+        private bool isGameplayLocked = false;
 
         public Vector2 MoveInput => moveInput;
+        public bool IsDead => isDead;
+        public bool IsGameplayLocked => isGameplayLocked;
 
         private void Awake()
         {
@@ -35,10 +43,12 @@ namespace ResistenciaTahuantinsuyo.Runtime.Player
             rb.freezeRotation = true;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
+            health = GetComponent<Health>();
+
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
             if (spriteRenderer != null)
             {
-                spriteRenderer.color = playerColor;
+                spriteRenderer.color = Color.white;
             }
         }
 
@@ -48,6 +58,20 @@ namespace ResistenciaTahuantinsuyo.Runtime.Player
             {
                 moveAction.action.Enable();
             }
+
+            if (health != null)
+            {
+                health.OnDamaged -= HandleDamage;
+                health.OnDamaged += HandleDamage;
+                health.OnDied -= HandleDeath;
+                health.OnDied += HandleDeath;
+            }
+
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.OnMissionFinished -= HandleMissionFinished;
+                ScoreManager.Instance.OnMissionFinished += HandleMissionFinished;
+            }
         }
 
         private void OnDisable()
@@ -56,15 +80,106 @@ namespace ResistenciaTahuantinsuyo.Runtime.Player
             {
                 moveAction.action.Disable();
             }
+
+            if (health != null)
+            {
+                health.OnDamaged -= HandleDamage;
+                health.OnDied -= HandleDeath;
+            }
+
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.OnMissionFinished -= HandleMissionFinished;
+            }
+        }
+
+        private void Start()
+        {
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.OnMissionFinished -= HandleMissionFinished;
+                ScoreManager.Instance.OnMissionFinished += HandleMissionFinished;
+
+                if (ScoreManager.Instance.IsMissionFinished)
+                {
+                    LockPlayer();
+                }
+            }
+        }
+
+        private void HandleMissionFinished(bool isVictory, int finalScore)
+        {
+            LockPlayer();
+        }
+
+        public void LockPlayer()
+        {
+            isGameplayLocked = true;
+            moveInput = Vector2.zero;
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+            }
+        }
+
+        private void HandleDamage(int amount)
+        {
+            if (isDead || isGameplayLocked || (ScoreManager.Instance != null && ScoreManager.Instance.IsMissionFinished))
+            {
+                return;
+            }
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayPlayerDamage();
+            }
+
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.RegisterDamageTaken();
+            }
+        }
+
+        private void HandleDeath()
+        {
+            // Si la misión ya finalizó (ej. victoria alcanzada previamente), ignorar muerte
+            if (ScoreManager.Instance != null && ScoreManager.Instance.IsMissionFinished)
+            {
+                return;
+            }
+
+            isDead = true;
+            moveInput = Vector2.zero;
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+            }
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayMissionFailed();
+            }
+
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.FinishMission(false);
+            }
         }
 
         private void Update()
         {
+            if (isDead || isGameplayLocked) return;
             ReadInput();
+            HandleFootsteps();
         }
 
         private void FixedUpdate()
         {
+            if (isDead || isGameplayLocked)
+            {
+                if (rb != null) rb.linearVelocity = Vector2.zero;
+                return;
+            }
             ApplyMovement();
         }
 
@@ -76,7 +191,6 @@ namespace ResistenciaTahuantinsuyo.Runtime.Player
             }
             else
             {
-                // Lectura mediante Input System (Keyboard.current)
                 var keyboard = Keyboard.current;
                 if (keyboard != null)
                 {
@@ -112,6 +226,26 @@ namespace ResistenciaTahuantinsuyo.Runtime.Player
                 float currentAngle = rb.rotation;
                 float newAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, rotationSpeed * Time.fixedDeltaTime);
                 rb.MoveRotation(newAngle);
+            }
+        }
+
+        private void HandleFootsteps()
+        {
+            if (moveInput.sqrMagnitude > 0.01f)
+            {
+                stepTimer += Time.deltaTime;
+                if (stepTimer >= stepInterval)
+                {
+                    stepTimer = 0f;
+                    if (AudioManager.Instance != null)
+                    {
+                        AudioManager.Instance.PlayPlayerStep(true);
+                    }
+                }
+            }
+            else
+            {
+                stepTimer = stepInterval * 0.8f;
             }
         }
     }

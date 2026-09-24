@@ -1,0 +1,37 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:Style src="project://database/Assets/_Project/UI/USS/HUD.uss?fileID=7433441132597879392&amp;guid=f9a8afbafc81f90449ee935a5446a341&amp;type=3#HUD" />
+    <ui:VisualElement name="HUDRoot" class="hud-root">
+        <ui:VisualElement name="TopBar" class="hud-top-bar">
+            <ui:VisualElement class="hud-panel">
+                <ui:VisualElement class="health-section">
+                    <ui:Label text="SALUD" class="health-label-header" />
+                    <ui:VisualElement class="health-bar-container">
+                        <ui:VisualElement name="HealthBarFill" class="health-bar-fill" />
+                        <ui:Label text="100 / 100" name="HealthText" class="health-bar-text" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label text="SIGILO" name="StealthBadge" class="badge badge-stealth" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hud-panel" style="flex-direction: column; align-items: flex-end;">
+                <ui:Label text="PUNTAJE: 0000" name="ScoreLabel" class="score-text" />
+                <ui:Label text="RELIQUIAS: 0 / 2" name="RelicsLabel" class="relics-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="VictoryModal" class="modal-overlay" style="display: none;">
+            <ui:VisualElement class="modal-box">
+                <ui:Label text="¡MISIÓN CUMPLIDA!" class="modal-title modal-title-victory" />
+                <ui:Label text="Has recuperado el patrimonio cultural y alcanzado la zona segura." class="modal-message" />
+                <ui:Label text="PUNTAJE FINAL: 0" name="VictoryScoreLabel" class="modal-score" />
+                <ui:Button text="REINTENTAR" name="BtnRestartVictory" class="modal-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="DefeatModal" class="modal-overlay" style="display: none;">
+            <ui:VisualElement class="modal-box">
+                <ui:Label text="¡MISIÓN FALLIDA!" class="modal-title modal-title-defeat" />
+                <ui:Label text="El guerrero ha caído ante las patrullas españolas. La resistencia continuará." class="modal-message" />
+                <ui:Label text="PUNTAJE: 0" name="DefeatScoreLabel" class="modal-score" />
+                <ui:Button text="REINTENTAR" name="BtnRestartDefeat" class="modal-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

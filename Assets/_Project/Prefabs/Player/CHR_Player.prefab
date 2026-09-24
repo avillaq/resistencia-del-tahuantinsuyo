@@ -104,6 +104,7 @@ GameObject:
   - component: {fileID: 7169182126998977467}
   - component: {fileID: 2075831798193903445}
   - component: {fileID: 2543006709170254673}
+  - component: {fileID: 4062738878557196339}
   - component: {fileID: 221712786435188178}
   m_Layer: 0
   m_Name: CHR_Player
@@ -121,7 +122,7 @@ Transform:
   m_GameObject: {fileID: 5722830198336679001}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -5, z: 0}
+  m_LocalPosition: {x: 0, y: -6, z: 0}
   m_LocalScale: {x: 1.2, y: 1.2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -251,6 +252,22 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
+--- !u!114 &4062738878557196339
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5722830198336679001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 831898858b2896745927bd9d93e60696, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResistenciaTahuantinsuyo.Runtime.Combat.Health
+  maxHealth: 100
+  invulnerabilityDuration: 0.8
+  targetRenderer: {fileID: 0}
+  damageFlashColor: {r: 0.66, g: 0.25, b: 0.21, a: 1}
 --- !u!114 &221712786435188178
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -265,5 +282,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResistenciaTahuantinsuyo.Runtime.Player.PlayerController
   moveSpeed: 4.5
   rotationSpeed: 900
-  playerColor: {r: 0.26, g: 0.32, b: 0.43, a: 1}
+  stepInterval: 0.35
   moveAction: {fileID: 0}

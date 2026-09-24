@@ -1,10 +1,14 @@
 using UnityEngine;
+using ResistenciaTahuantinsuyo.Runtime.Audio;
+using ResistenciaTahuantinsuyo.Runtime.Combat;
+using ResistenciaTahuantinsuyo.Runtime.Gameplay;
 
 namespace ResistenciaTahuantinsuyo.Runtime.AI
 {
     /// <summary>
-    /// Controlador principal de IA de enemigos según product.md (Secciones 7.2, 7.3, 7.5).
-    /// Coordina la máquina de estados entre WANDER y SEEK, y el retorno tras perder la visión.
+    /// Controlador principal de IA de enemigos según product.md (Secciones 7.2, 7.3, 7.5, 7.6, 15).
+    /// Coordina la máquina de estados entre WANDER y SEEK, ataque cuerpo a cuerpo y eventos de Audio/Score.
+    /// Responde a la finalización de misión congelando comportamiento y silenciando pasos.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(EnemyPerception))]
@@ -29,9 +33,14 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
         [Tooltip("Tiempo en segundos que busca en la última posición conocida tras perder la línea de visión antes de volver a WANDER.")]
         [SerializeField] private float lostSightCooldown = 1.5f;
 
-        [Header("Colores de Estado (Paleta Andina)")]
-        [SerializeField] private Color wanderColor = new Color(0.60f, 0.36f, 0.24f); // #9A5B3E Arcilla / Terracota
-        [SerializeField] private Color seekColor = new Color(0.66f, 0.25f, 0.21f);   // #A94136 Rojo alerta
+        [Header("Combate Táctico")]
+        [SerializeField] private int attackDamage = 25;
+        [SerializeField] private float attackDistance = 0.85f;
+        [SerializeField] private float attackCooldown = 1.0f;
+
+        [Header("Colores de Estado")]
+        [SerializeField] private Color wanderColor = Color.white;
+        [SerializeField] private Color seekColor = new Color(1.0f, 0.6f, 0.6f);
 
         // Componentes internos
         private Rigidbody2D rb;
@@ -43,18 +52,22 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
         private int patrolDirection = 1;
         private float waitTimer = 0f;
         private float lostSightTimer = 0f;
+        private float stepTimer = 0f;
+        private float attackTimer = 0f;
         private Vector2 lastKnownTargetPos;
         private bool isWaitingAtWaypoint = false;
+        private bool wasInSeek = false;
+        private bool isMissionFinished = false;
 
         public EnemyState CurrentState => currentState;
         public EnemyPerception Perception => perception;
+        public bool IsMissionFinished => isMissionFinished;
 
         private void Awake()
         {
             rb = GetComponent<Rigidbody2D>();
             perception = GetComponent<EnemyPerception>();
 
-            // Configurar Rigidbody2D para 2D cenital
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
@@ -65,9 +78,37 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
             }
         }
 
+        private void OnEnable()
+        {
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.OnMissionFinished -= HandleMissionFinished;
+                ScoreManager.Instance.OnMissionFinished += HandleMissionFinished;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.OnMissionFinished -= HandleMissionFinished;
+            }
+        }
+
         private void Start()
         {
-            // Si no se asignó jugador manualmente, buscar por Tag Player
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.OnMissionFinished -= HandleMissionFinished;
+                ScoreManager.Instance.OnMissionFinished += HandleMissionFinished;
+
+                if (ScoreManager.Instance.IsMissionFinished)
+                {
+                    FreezeEnemy();
+                    return;
+                }
+            }
+
             if (targetPlayer == null)
             {
                 GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
@@ -77,16 +118,54 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
                 }
             }
 
-            TransitionToWander();
+            TransitionToWander(false);
+        }
+
+        private void HandleMissionFinished(bool isVictory, int finalScore)
+        {
+            FreezeEnemy();
+        }
+
+        public void FreezeEnemy()
+        {
+            isMissionFinished = true;
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+            }
+
+            if (alertIndicatorRenderer != null)
+            {
+                alertIndicatorRenderer.enabled = false;
+            }
+
+            if (bodyRenderer != null)
+            {
+                bodyRenderer.color = wanderColor;
+            }
+
+            if (perception != null)
+            {
+                perception.SetTargetDetected(false);
+            }
         }
 
         private void Update()
         {
+            if (isMissionFinished) return;
+
             UpdatePerceptionAndStateTransitions();
+            HandleAudioSteps();
         }
 
         private void FixedUpdate()
         {
+            if (isMissionFinished)
+            {
+                if (rb != null) rb.linearVelocity = Vector2.zero;
+                return;
+            }
+
             switch (currentState)
             {
                 case EnemyState.Wander:
@@ -131,10 +210,9 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
                     perception.SetTargetDetected(false);
                     lostSightTimer += Time.deltaTime;
 
-                    // Si transcurrió el tiempo de gracia sin ver al jugador, retornar a WANDER
                     if (lostSightTimer >= lostSightCooldown)
                     {
-                        TransitionToWander();
+                        TransitionToWander(true);
                     }
                 }
             }
@@ -143,28 +221,53 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
         private void TransitionToSeek()
         {
             currentState = EnemyState.Seek;
+            wasInSeek = true;
             lostSightTimer = 0f;
             isWaitingAtWaypoint = false;
             waitTimer = 0f;
+            attackTimer = attackCooldown * 0.8f; // Pre-cargar ataque para rápida respuesta
 
             UpdateVisualState(seekColor, true);
+
+            // Audio: Alerta y transición a música de tensión
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayEnemyAlert();
+                AudioManager.Instance.SetTensionMusic(true);
+            }
+
+            // Score: Registrar penalización por detección de sigilo
+            if (ScoreManager.Instance != null)
+            {
+                ScoreManager.Instance.RegisterDetection();
+            }
         }
 
-        private void TransitionToWander()
+        private void TransitionToWander(bool playLostSightSound = true)
         {
+            bool hadBeenSeeking = wasInSeek;
             currentState = EnemyState.Wander;
+            wasInSeek = false;
             perception.SetTargetDetected(false);
             lostSightTimer = 0f;
             isWaitingAtWaypoint = false;
             waitTimer = 0f;
 
-            // Retomar el waypoint más cercano en la ruta
             if (patrolRoute != null && patrolRoute.WaypointCount > 0)
             {
                 patrolRoute.GetClosestWaypoint(transform.position, out currentWaypointIndex);
             }
 
             UpdateVisualState(wanderColor, false);
+
+            if (hadBeenSeeking && AudioManager.Instance != null)
+            {
+                if (playLostSightSound)
+                {
+                    AudioManager.Instance.PlayEnemyLostSight();
+                }
+                AudioManager.Instance.SetTensionMusic(false);
+            }
         }
 
         private void UpdateVisualState(Color bodyColor, bool alertActive)
@@ -180,9 +283,26 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
             }
         }
 
+        private void HandleAudioSteps()
+        {
+            if (rb.linearVelocity.sqrMagnitude > 0.05f)
+            {
+                float interval = (currentState == EnemyState.Seek) ? 0.35f : 0.5f;
+                stepTimer += Time.deltaTime;
+                if (stepTimer >= interval)
+                {
+                    stepTimer = 0f;
+                    if (AudioManager.Instance != null)
+                    {
+                        AudioManager.Instance.PlayEnemyStep();
+                    }
+                }
+            }
+        }
+
         #endregion
 
-        #region Comportamientos de Movimiento
+        #region Comportamientos de Movimiento y Combate
 
         private void HandleWanderPhysics()
         {
@@ -241,6 +361,25 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
             Vector2 toTarget = targetDestination - currentPos;
             float distance = toTarget.magnitude;
 
+            // Ataque táctico cuerpo a cuerpo al jugador
+            if (targetPlayer != null && distance <= attackDistance)
+            {
+                attackTimer += Time.fixedDeltaTime;
+                if (attackTimer >= attackCooldown)
+                {
+                    attackTimer = 0f;
+                    var damageable = targetPlayer.GetComponent<IDamageable>();
+                    if (damageable != null && !damageable.IsDead)
+                    {
+                        damageable.TakeDamage(attackDamage, toTarget.normalized);
+                    }
+                }
+            }
+            else
+            {
+                attackTimer = attackCooldown * 0.7f;
+            }
+
             if (distance <= arrivalDistance)
             {
                 rb.linearVelocity = Vector2.zero;
@@ -256,7 +395,6 @@ namespace ResistenciaTahuantinsuyo.Runtime.AI
         {
             if (direction.sqrMagnitude < 0.001f) return;
 
-            // En 2D cenital con transform.up como forward
             float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
             float currentAngle = rb.rotation;
             float newAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, rotationSpeed * Time.fixedDeltaTime);
